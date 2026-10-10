@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🍦 آيسكريم القرش 🦈</title>
+<style>
+  body{font-family:sans-serif;background:#fff0f5;margin:0;padding:10px}
+  h1{text-align:center;color:#ff4081}
+  .tabs{display:flex;gap:5px;justify-content:center;margin:15px 0}
+  .tabs button{padding:10px 15px;border:none;border-radius:20px;cursor:pointer;background:#ffe4ec}
+  .tabs button.active{background:#ff4081;color:white}
+  .menu{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .card{background:white;padding:15px;border-radius:15px;text-align:center;box-shadow:0 3px 10px #0001}
+  .card span{font-size:40px}
+  .btn{background:#ff4081;color:white;border:none;padding:8px 15px;border-radius:20px;cursor:pointer;margin-top:5px}
+  .order-box{background:white;padding:10px;margin:8px 0;border-radius:10px}
+  #cart{position:fixed;bottom:0;left:0;right:0;background:white;padding:12px;text-align:center;box-shadow:0 -2px 10px #0002}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+
+<h1>🍦 مطعم آيسكريم القرش 🦈</h1>
+<p style="text-align:center">أم درمان - الثورة الحارة 8 | توصيل فوري</p>
+
+<div class="tabs">
+  <button class="active" onclick="showTab('customer')">العميل</button>
+  <button onclick="showTab('driver')">عامل التوصيل</button>
+  <button onclick="showTab('store')">صاحب المتجر</button>
+  <button onclick="showTab('admin')">الادمن</button>
+</div>
+
+<!-- 1. واجهة العميل: يعرف الطلبات والسعر فقط -->
+<div id="customer">
+  <div class="menu" id="menu"></div>
+  <h3>طلباتي (السعر فقط)</h3>
+  <div id="customer-orders"></div>
+</div>
+
+<!-- 2. واجهة السائق: يعرف الوجهة واسم العميل فقط -->
+<div id="driver" class="hidden">
+  <h3>مهام التوصيل (الوجهة واسم العميل فقط)</h3>
+  <div id="driver-jobs"></div>
+</div>
+
+<!-- 3. واجهة صاحب المتجر: يعرف طلبات العميل وموقع اقرب سائق -->
+<div id="store" class="hidden">
+  <h3>لوحة صاحب المتجر</h3>
+  <p>أقرب سائق متاح: <b>محمد - 500 متر منك</b> 📍</p>
+  <div id="store-orders"></div>
+</div>
+
+<!-- 4. واجهة الادمن: كل شي -->
+<div id="admin" class="hidden">
+  <h3>لوحة الادمن - الصلاحية المطلقة</h3>
+  <div id="admin-all"></div>
+</div>
+
+<div id="cart">السلة: <span id="cart-count">0</span> | الاجمالي: <span id="cart-total">0</span> جنيه <button class="btn" onclick="placeOrder()">اطلب الآن</button></div>
+
+<script>
+const menu=[
+  {id:1,name:"شوكولاتة",price:3000,emoji:"🍫"},
+  {id:2,name:"فانيليا",price:2500,emoji:"🍦"},
+  {id:3,name:"مانجو",price:3500,emoji:"🥭"},
+  {id:4,name:"ميكس القرش",price:5000,emoji:"🦈🍦"},
+];
+let cart=[];
+let orders=JSON.parse(localStorage.getItem('ice_orders')||'[]');
+
+function renderMenu(){
+  document.getElementById('menu').innerHTML=menu.map(m=>`
+    <div class="card"><span>${m.emoji}</span><h4>${m.name}</h4><p>${m.price} جنيه</p>
+    <button class="btn" onclick="addCart(${m.id})">أضف</button></div>
+  `).join('');
+}
+function addCart(id){cart.push(id); updateCart();}
+function updateCart(){
+  let total=cart.reduce((s,id)=>s+(menu.find(m=>m.id==id).price),0);
+  document.getElementById('cart-count').innerText=cart.length;
+  document.getElementById('cart-total').innerText=total;
+}
+function placeOrder(){
+  if(cart.length==0) return alert('السلة فاضية');
+  let name=prompt('اسمك؟')||'علي';
+  let phone=prompt('رقمك؟')||'0910000000';
+  let total=cart.reduce((s,id)=>s+(menu.find(m=>m.id==id).price),0);
+  let order={
+    id:orders.length+1,
+    customer_name:name,
+    customer_phone:phone,
+    items:cart.map(id=>menu.find(m=>m.id==id).name),
+    total_price:total,
+    lat:15.5007, lng:32.5599,
+    address:"الثورة الحارة 8",
+    status:"pending",
+    driver:{name:"محمد - سواق", distance:"500 متر"}
+  };
+  orders.push(order);
+  localStorage.setItem('ice_orders',JSON.stringify(orders));
+  cart=[]; updateCart(); renderAll();
+  alert(`تم الطلب رقم ${order.id} - ${total} جنيه 🍦`);
+}
+
+function renderAll(){
+  // 1. العميل: السعر فقط
+  document.getElementById('customer-orders').innerHTML=orders.map(o=>`
+    <div class="order-box">طلب #${o.id} | ${o.items.join(', ')} | <b>${o.total_price} جنيه</b> | ${o.status}</div>
+  `).join('')||'لا يوجد طلبات';
+
+  // 2. السائق: الوجهة والاسم فقط
+  document.getElementById('driver-jobs').innerHTML=orders.map(o=>`
+    <div class="order-box"><b>العميل:</b> ${o.customer_name}<br><b>التلفون:</b> ${o.customer_phone}<br><b>الوجهة:</b> ${o.address} <br><a class="btn" target="_blank" href="https://www.google.com/maps?q=${o.lat},${o.lng}">فتح الخريطة 🗺️</a></div>
+  `).join('');
+
+  // 3. صاحب المتجر
+  document.getElementById('store-orders').innerHTML=orders.map(o=>`
+    <div class="order-box">#${o.id} - ${o.customer_name} - ${o.customer_phone}<br>${o.items} - ${o.total_price} جنيه<br>📍 أقرب سائق: ${o.driver.name} (${o.driver.distance})</div>
+  `).join('');
+
+  // 4. الادمن
+  document.getElementById('admin-all').innerHTML=`<p>اجمالي الطلبات: ${orders.length} | الارباح: ${orders.reduce((s,o)=>s+o.total_price,0)} جنيه</p>` + orders.map(o=>`
+    <div class="order-box">ID:${o.id} | ${o.customer_name} | ${o.customer_phone} | ${o.items} | ${o.total_price} | ${o.lat},${o.lng} | ${o.address} | ${o.status}</div>
+  `).join('');
+}
+
+function showTab(t){
+  document.querySelectorAll('#customer,#driver,#store,#admin').forEach(d=>d.classList.add('hidden'));
+  document.getElementById(t).classList.remove('hidden');
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+renderMenu(); renderAll();
+</script>
+</body>
+    </html>
